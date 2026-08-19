@@ -1,5 +1,5 @@
 # Web Toolbox
-
+已部署cloudflare：https://web-tools.851911696.workers.dev/#/json
 一个使用 Vite、Vanilla TypeScript 与原生 CSS 构建的浏览器本地工具站。生产运行时零第三方依赖，不包含后端、账号、埋点、广告或业务网络请求。
 
 ## 功能
