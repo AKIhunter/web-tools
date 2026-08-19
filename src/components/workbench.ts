@@ -1,4 +1,5 @@
 import { copyText } from '../platform/clipboard';
+import { setNotice } from './notice';
 
 export type WorkbenchOptions = {
   inputLabel?: string;
@@ -8,12 +9,18 @@ export type WorkbenchOptions = {
   runLabel?: string;
   auto?: boolean;
   canSwap?: boolean;
+  inputVisible?: boolean;
+  outputVisible?: boolean;
+  afterProcess?: (output: string) => void;
+  afterClear?: () => void;
   process: (input: string) => string | Promise<string>;
 };
 
 export function createWorkbench(options: WorkbenchOptions): HTMLElement {
   const root = document.createElement('section');
-  root.className = 'workbench';
+  const inputVisible = options.inputVisible !== false;
+  const outputVisible = options.outputVisible !== false;
+  root.className = ['workbench', inputVisible ? '' : 'single-output', outputVisible ? '' : 'input-only'].filter(Boolean).join(' ');
   root.innerHTML = `
     <div class="editor-grid">
       <label class="editor"><span>${options.inputLabel ?? '输入'}</span><textarea class="input" spellcheck="false"></textarea><small class="input-stat">0 字符 · 0 字节 · 1 行</small></label>
@@ -26,13 +33,16 @@ export function createWorkbench(options: WorkbenchOptions): HTMLElement {
       <button class="copy" type="button">复制结果</button>
       <button class="clear" type="button">清空</button>
     </div>
-    <p class="notice" role="status" aria-live="polite"></p>`;
+    <p class="notice alert" role="status" aria-live="polite"></p>`;
   const input = root.querySelector<HTMLTextAreaElement>('.input')!;
   const output = root.querySelector<HTMLTextAreaElement>('.output')!;
   const notice = root.querySelector<HTMLElement>('.notice')!;
   const outputStat = root.querySelector<HTMLElement>('.output-stat')!;
   input.placeholder = options.placeholder ?? '在此输入内容';
-  root.querySelector<HTMLButtonElement>('.swap')!.hidden = options.canSwap === false;
+  root.querySelector<HTMLLabelElement>('.editor')!.hidden = !inputVisible;
+  output.closest<HTMLLabelElement>('.editor')!.hidden = !outputVisible;
+  root.querySelector<HTMLButtonElement>('.swap')!.hidden = options.canSwap === false || !inputVisible || !outputVisible;
+  root.querySelector<HTMLButtonElement>('.sample')!.hidden = !inputVisible;
 
   const updateInputStat = () => {
     const bytes = new TextEncoder().encode(input.value).length;
@@ -40,21 +50,25 @@ export function createWorkbench(options: WorkbenchOptions): HTMLElement {
     if (output.value) outputStat.textContent = '输入已改变，结果待更新';
   };
   const run = async () => {
-    notice.textContent = '';
+    setNotice(notice);
     const started = performance.now();
     try {
       output.value = await options.process(input.value);
       outputStat.textContent = `${output.value.length} 字符 · ${(performance.now() - started).toFixed(1)} ms`;
+      options.afterProcess?.(output.value);
     } catch (error) {
-      notice.textContent = error instanceof Error ? error.message : '处理失败';
+      options.afterClear?.();
+      setNotice(notice, error instanceof Error ? error.message : '处理失败', 'error');
     }
   };
   root.querySelector('.run')!.addEventListener('click', run);
   root.querySelector('.clear')!.addEventListener('click', () => {
     input.value = '';
     output.value = '';
-    notice.textContent = '';
-    updateInputStat();
+    setNotice(notice);
+    outputStat.textContent = '等待处理';
+    if (inputVisible) updateInputStat();
+    options.afterClear?.();
   });
   root.querySelector('.sample')!.addEventListener('click', () => {
     if (input.value && !confirm('载入示例会覆盖当前输入，是否继续？')) return;
@@ -68,7 +82,7 @@ export function createWorkbench(options: WorkbenchOptions): HTMLElement {
   });
   root.querySelector('.copy')!.addEventListener('click', async () => {
     const copied = await copyText(output.value, output);
-    notice.textContent = copied ? '已复制到剪贴板' : '已选中结果，请手动复制';
+    setNotice(notice, copied ? '已复制到剪贴板' : '已选中结果，请手动复制', copied ? 'success' : 'info');
   });
   input.addEventListener('input', () => {
     updateInputStat();
@@ -80,6 +94,6 @@ export function createWorkbench(options: WorkbenchOptions): HTMLElement {
       void run();
     }
   });
-  queueMicrotask(() => input.focus());
+  queueMicrotask(() => (inputVisible ? input : output).focus());
   return root;
 }

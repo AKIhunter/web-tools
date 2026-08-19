@@ -3,7 +3,9 @@ import { encodeBase64Text, decodeBase64Text, fileToDataUrl, parseDataUrl } from 
 import { buildFormQuery, decodeUrlComponent, encodeUrlComponent, parseFormQuery, parseUrl } from '../tools/codec/url-service';
 import { escapeUnicode, unescapeUnicode, utf8Hex } from '../tools/codec/unicode-service';
 import { decryptText, digestText, encryptText, signHmac, verifyHmac } from '../tools/crypto/crypto-service';
+import { generatePassword, generateToken, generateUlid, generateUuidV4, TokenFormat } from '../tools/generator/random-service';
 import { compressImage, LatestTask, outputName } from '../tools/image/image-service';
+import { tokenizeJsonForHighlight } from '../tools/json/json-highlight-service';
 import { escapeJsonString, processJson, unescapeJsonString } from '../tools/json/json-service';
 import { dateTimeToTimestamp, parseTimestamp } from '../tools/timestamp/timestamp-service';
 import { ObjectUrlStore } from '../platform/object-url-store';
@@ -31,9 +33,42 @@ function withControl(label: string, control: HTMLElement, child: HTMLElement): H
 
 function jsonPage(): PageResult {
   const mode = select([['2', '格式化 · 2 空格'], ['4', '格式化 · 4 空格'], ['tab', '格式化 · Tab'], ['0', '压缩'], ['sort', '键排序'], ['escape', '字符串转义'], ['unescape', '字符串去转义']]);
+  const resultPanel = document.createElement('section');
+  resultPanel.className = 'json-result-panel';
+  const resultTitle = document.createElement('span');
+  resultTitle.textContent = '结果';
+  const preview = document.createElement('pre');
+  preview.className = 'json-preview';
+  preview.classList.add('empty');
+  preview.setAttribute('aria-label', 'JSON 结果');
+  preview.textContent = '等待处理';
+  resultPanel.append(resultTitle, preview);
+  const clearPreview = () => {
+    preview.classList.add('empty');
+    preview.replaceChildren('等待处理');
+  };
+  const renderPreview = (output: string) => {
+    if (mode.value === 'escape' || mode.value === 'unescape') {
+      preview.classList.remove('empty');
+      preview.replaceChildren(output);
+      return;
+    }
+    preview.classList.remove('empty');
+    preview.replaceChildren(...tokenizeJsonForHighlight(output).map((token) => {
+      const span = document.createElement('span');
+      span.className = `json-token ${token.kind}`;
+      span.textContent = token.value;
+      return span;
+    }));
+    preview.hidden = false;
+  };
   const workbench = createWorkbench({
     sample: '{"name":"工具箱","items":[1,true,"中文"],"meta":{"safe":true}}',
     auto: true,
+    canSwap: false,
+    outputVisible: false,
+    afterProcess: renderPreview,
+    afterClear: clearPreview,
     process: (input) => {
       if (mode.value === 'escape') return escapeJsonString(input);
       if (mode.value === 'unescape') return unescapeJsonString(input);
@@ -43,7 +78,10 @@ function jsonPage(): PageResult {
     },
   });
   mode.addEventListener('change', () => workbench.querySelector<HTMLButtonElement>('.run')?.click());
-  return { element: withControl('处理方式', mode, workbench) };
+  const body = document.createElement('div');
+  body.className = 'json-tool-layout';
+  body.append(workbench, resultPanel);
+  return { element: withControl('处理方式', mode, body) };
 }
 
 function urlPage(): PageResult {
@@ -89,7 +127,7 @@ function base64TextPage(): PageResult {
 function base64FilePage(): PageResult {
   const root = document.createElement('div');
   root.className = 'file-panel';
-  root.innerHTML = '<label class="drop-zone">选择文件<input type="file"></label><textarea readonly placeholder="Data URL 结果"></textarea><div class="actions"><button type="button" class="download">下载解析文件</button></div><p class="notice" aria-live="polite"></p>';
+  root.innerHTML = '<label class="drop-zone">选择文件<input type="file"></label><textarea readonly placeholder="Data URL 结果"></textarea><div class="actions"><button type="button" class="download">下载解析文件</button></div><p class="notice alert" role="status" aria-live="polite"></p>';
   const input = root.querySelector<HTMLInputElement>('input')!;
   const output = root.querySelector<HTMLTextAreaElement>('textarea')!;
   const notice = root.querySelector<HTMLElement>('.notice')!;
@@ -167,6 +205,91 @@ function aesPage(): PageResult {
   return { element: root, cleanup: () => { password.value = ''; } };
 }
 
+function uuidPage(): PageResult {
+  const mode = select([['uuid', 'UUID v4'], ['ulid', 'ULID'], ['both', 'UUID + ULID']]);
+  const count = document.createElement('input');
+  count.type = 'number';
+  count.min = '1';
+  count.max = '100';
+  count.value = '5';
+  const workbench = createWorkbench({
+    outputLabel: '标识符',
+    canSwap: false,
+    inputVisible: false,
+    runLabel: '生成',
+    process: () => {
+      const total = Math.min(100, Math.max(1, Number.parseInt(count.value, 10) || 1));
+      const rows = Array.from({ length: total }, () => {
+        if (mode.value === 'uuid') return generateUuidV4();
+        if (mode.value === 'ulid') return generateUlid();
+        return `${generateUuidV4()}\t${generateUlid()}`;
+      });
+      return rows.join('\n');
+    },
+  });
+  const controls = document.createElement('div');
+  controls.className = 'parameters';
+  const countLabel = document.createElement('label');
+  countLabel.textContent = '数量';
+  countLabel.append(count);
+  const modeLabel = document.createElement('label');
+  modeLabel.textContent = '类型';
+  modeLabel.append(mode);
+  controls.append(modeLabel, countLabel);
+  const root = document.createElement('div');
+  root.append(controls, workbench);
+  return { element: root };
+}
+
+function randomPage(): PageResult {
+  const mode = select([['token', '随机 Token'], ['password', '随机密码']]);
+  const format = select([['base64url', 'Base64URL'], ['hex', '十六进制'], ['numeric', '纯数字']]);
+  const length = document.createElement('input');
+  length.type = 'number';
+  length.min = '1';
+  length.max = '256';
+  length.value = '32';
+  const symbols = document.createElement('input');
+  symbols.type = 'checkbox';
+  const workbench = createWorkbench({
+    outputLabel: '结果',
+    canSwap: false,
+    inputVisible: false,
+    runLabel: '生成',
+    process: () => {
+      const size = Math.min(256, Math.max(1, Number.parseInt(length.value, 10) || 1));
+      if (mode.value === 'password') {
+        return generatePassword({ length: size, lowercase: true, uppercase: true, digits: true, symbols: symbols.checked });
+      }
+      return generateToken(size, format.value as TokenFormat);
+    },
+  });
+  const updateMode = () => {
+    format.disabled = mode.value === 'password';
+    symbols.disabled = mode.value !== 'password';
+  };
+  mode.addEventListener('change', updateMode);
+  updateMode();
+  const controls = document.createElement('div');
+  controls.className = 'parameters';
+  const modeLabel = document.createElement('label');
+  modeLabel.textContent = '类型';
+  modeLabel.append(mode);
+  const lengthLabel = document.createElement('label');
+  lengthLabel.textContent = '长度';
+  lengthLabel.append(length);
+  const formatLabel = document.createElement('label');
+  formatLabel.textContent = 'Token 格式';
+  formatLabel.append(format);
+  const symbolsLabel = document.createElement('label');
+  symbolsLabel.className = 'inline-control';
+  symbolsLabel.append(symbols, document.createTextNode('包含符号'));
+  controls.append(modeLabel, lengthLabel, formatLabel, symbolsLabel);
+  const root = document.createElement('div');
+  root.append(controls, workbench);
+  return { element: root };
+}
+
 function timestampPage(): PageResult {
   const unit = select([['auto', '自动识别'], ['seconds', '秒'], ['milliseconds', '毫秒'], ['datetime', '本地日期时间转时间戳']]);
   const workbench = createWorkbench({
@@ -207,7 +330,7 @@ function imagePage(): PageResult {
       <button class="primary compress" type="button">压缩图片</button>
     </div>
     <div class="image-compare"><figure><figcaption>原图</figcaption><img class="before" alt="原图预览"><small class="before-stat"></small></figure><figure><figcaption>结果</figcaption><img class="after" alt="压缩结果预览"><small class="after-stat"></small></figure></div>
-    <a class="button download" hidden>下载结果</a><p class="notice" aria-live="polite">重新编码会移除 EXIF/GPS 等元数据；PNG 不保证变小。</p>`;
+    <a class="button download" hidden>下载结果</a><p class="notice alert info" role="status" aria-live="polite">重新编码会移除 EXIF/GPS 等元数据；PNG 不保证变小。</p>`;
   const fileInput = root.querySelector<HTMLInputElement>('.image-input')!;
   let file: File | undefined;
   fileInput.addEventListener('change', () => {
@@ -257,6 +380,8 @@ export function renderToolPage(route: string): PageResult {
   if (route === '#/crypto/digest') return digestPage();
   if (route === '#/crypto/hmac') return hmacPage();
   if (route === '#/crypto/aes-gcm') return aesPage();
+  if (route === '#/generator/uuid') return uuidPage();
+  if (route === '#/generator/random') return randomPage();
   if (route === '#/timestamp') return timestampPage();
   if (route === '#/image/compress') return imagePage();
   return { element: document.createElement('div') };
