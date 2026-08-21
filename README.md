@@ -7,14 +7,15 @@
 - 首页：推荐工具、收藏、最近使用与分类总览；收藏和最近使用只保存工具路径，不保存输入内容
 - 搜索：支持标题、描述、分类、关键词、别名与标签匹配，支持上下键、Enter 与 Esc
 - 数据格式：JSON 校验、格式化、压缩、键排序、结构统计、key 高亮预览与双 JSON 对比
-- 编码解码：URL 组件、完整 URL、查询参数、Unicode、UTF-8 字节、Base64 文本、Base64URL、文件与 Data URL
+- 编码解码：URL 组件、完整 URL、查询参数、Unicode、UTF-8 字节、JWT 解析、Base64 文本、Base64URL、文件与 Data URL
 - 加密与安全：SHA-256/384/512、HMAC-SHA-256、PBKDF2 + AES-256-GCM
 - 生成器：纯前端 UUID v4、ULID、随机 Token、十六进制串、数字串与可配置密码
+- 文本处理：camelCase、PascalCase、snake_case、kebab-case、CONSTANT_CASE、Title Case 与 dot.case 命名转换
 - 时间与日期：秒/毫秒识别、本地时间、UTC ISO 与相对时间
-- 图片与颜色：JPEG/PNG/WebP 缩放、质量控制、前后预览与下载
+- 图片与颜色：JPEG/PNG/WebP 缩放、质量控制、前后预览与下载，HEX、RGB/RGBA、HSL/HSLA 颜色转换
 - 开发辅助：MySQL、ClickHouse、Doris、PostgreSQL 等 SQL 格式化与 Redis 命令格式化，高亮展示关键字、函数和值
 
-当前 13 个工具覆盖 7 个已开放分类；文本处理等分类会随后续纯前端工具逐步补齐。
+当前 16 个工具覆盖 8 个已开放分类；后续会继续按插件方式补齐 Diff、正则、格式转换等纯前端工具。
 
 ## 开发
 
