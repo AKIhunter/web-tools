@@ -25,9 +25,10 @@ export const tools: ToolDefinition[] = [
   { route: '#/generator/random', category: '生成器', title: '随机 Token / 密码', description: '生成随机 Token、十六进制串和可配置密码', keywords: ['token', 'password', '密码', '随机'], aliases: ['random token', 'password generator', 'secret'], icon: 'KEY', tags: ['随机', '密码', '密钥素材'], privacyLevel: 'crypto-sensitive', featured: true },
   { route: '#/timestamp', category: '时间与日期', title: '时间戳转换', description: '秒、毫秒、本地时间与 UTC', keywords: ['时间戳', 'timestamp', '日期'], aliases: ['unix time', 'epoch', 'date'], icon: 'T', tags: ['时间', '日期'], privacyLevel: 'local-only' },
   { route: '#/image/compress', category: '图片与颜色', title: '图片压缩', description: '缩放并导出 JPEG、PNG 或 WebP', keywords: ['图片', '压缩', 'webp', 'jpeg'], aliases: ['image compressor', 'resize image'], icon: 'IMG', tags: ['图片', '压缩'], privacyLevel: 'local-file' },
+  { route: '#/dev/sql', category: '数据库SQL辅助', title: 'SQL 格式化', description: '格式化 MySQL、ClickHouse、Doris、PostgreSQL 与 Redis 命令并高亮结构', keywords: ['sql', 'mysql', 'clickhouse', 'doris', 'postgresql', 'redis', '格式化'], aliases: ['sql formatter', 'redis command', 'query formatter'], icon: 'SQL', tags: ['数据库', '格式化', '高亮'], privacyLevel: 'local-only', featured: true },
 ];
 
-export const categories = ['数据格式', '编码解码', '加密与安全', '文本处理', '生成器', '时间与日期', '图片与颜色', '开发辅助'];
+export const categories = ['数据格式', '编码解码', '加密与安全', '文本处理', '生成器', '时间与日期', '图片与颜色', '数据库SQL辅助', '开发辅助'];
 
 export function findTool(hash: string): ToolDefinition | undefined {
   return tools.find((tool) => tool.route === hash);

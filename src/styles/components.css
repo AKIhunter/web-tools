@@ -41,6 +41,19 @@ textarea[readonly] { color: var(--text); }
 .json-token.number { color: var(--json-number); }
 .json-token.boolean, .json-token.null { color: var(--json-literal); font-weight: 650; }
 .json-token.punctuation { color: var(--json-punctuation); }
+.sql-tool-layout { display: grid; gap: var(--space-3); }
+.sql-tool-layout .workbench textarea { min-height: 320px; }
+.sql-result-panel { display: flex; flex-direction: column; gap: var(--space-1); font-weight: 650; }
+.sql-preview { min-height: 380px; max-height: 680px; overflow: auto; margin: 0; padding: var(--space-3); color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-soft); font-family: var(--font-mono); font-size: 0.92rem; font-weight: 400; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.sql-preview.empty { color: var(--text-secondary); }
+.sql-token.keyword { color: var(--sql-keyword); font-weight: 750; }
+.sql-token.function { color: var(--sql-function); font-weight: 650; }
+.sql-token.string { color: var(--sql-string); }
+.sql-token.number { color: var(--sql-number); }
+.sql-token.comment { color: var(--sql-comment); font-style: italic; }
+.sql-token.operator { color: var(--sql-operator); }
+.sql-token.variable { color: var(--accent); font-weight: 650; }
+.sql-token.punctuation { color: var(--text-secondary); }
 .file-panel, .image-tool { padding: var(--space-3); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
 .drop-zone { display: grid; place-items: center; min-height: 150px; margin-bottom: var(--space-3); border: 1px dashed var(--border); border-radius: var(--radius); cursor: pointer; }
 .drop-zone input { max-width: 100%; }

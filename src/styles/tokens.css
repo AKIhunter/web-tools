@@ -32,6 +32,12 @@
   --json-number: #0071e3;
   --json-literal: #8a3ffc;
   --json-punctuation: var(--text-secondary);
+  --sql-keyword: #8a3ffc;
+  --sql-function: #0071e3;
+  --sql-string: #248a3d;
+  --sql-number: #b25000;
+  --sql-comment: #6e6e73;
+  --sql-operator: #d70015;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", system-ui, sans-serif;
 }
 
@@ -55,4 +61,10 @@
   --json-string: #30d158;
   --json-number: #2997ff;
   --json-literal: #bf5af2;
+  --sql-keyword: #bf5af2;
+  --sql-function: #2997ff;
+  --sql-string: #30d158;
+  --sql-number: #ff9f0a;
+  --sql-comment: #a1a1a6;
+  --sql-operator: #ff453a;
 }
