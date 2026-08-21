@@ -12,8 +12,19 @@ a { color: inherit; text-decoration: none; }
 .search input { width: 100%; }
 .theme { justify-self: end; }
 .menu { display: none; }
-.shell { display: grid; grid-template-columns: 240px minmax(0, 1fr); max-width: 1440px; margin: 0 auto; }
-.sidebar { position: sticky; top: 64px; height: calc(100vh - 64px); overflow: auto; padding: var(--space-4); border-right: 1px solid var(--border); }
+.shell { --sidebar-width: 240px; position: relative; display: block; min-height: calc(100vh - 64px); }
+.sidebar { position: fixed; z-index: 16; top: 64px; left: 0; width: var(--sidebar-width); height: calc(100vh - 64px); overflow: auto; padding: var(--space-4); background: var(--page); border-right: 1px solid var(--border); transition: width 180ms ease, padding 180ms ease, opacity 140ms ease; }
+.shell.sidebar-collapsed .sidebar { width: 0; overflow: hidden; padding-inline: 0; opacity: 0; pointer-events: none; }
+.sidebar-toggle {
+  position: fixed; top: calc(64px + 45vh); left: var(--sidebar-width); z-index: 18;
+  width: 28px; min-height: 44px; padding: 0; transform: translateX(-50%);
+  border-radius: var(--radius-pill); background: var(--surface);
+  box-shadow: var(--shadow-soft); font-size: 1.2rem; line-height: 1;
+  transition: left 180ms ease, transform 180ms ease;
+}
+.shell.sidebar-collapsed .sidebar-toggle { left: 0; transform: translateX(8px); }
+.shell > main { max-width: 1440px; margin-left: var(--sidebar-width); transition: margin-left 180ms ease; }
+.shell.sidebar-collapsed > main { margin-left: 0; }
 .sidebar section { margin-bottom: var(--space-4); }
 .sidebar h2 { margin: 0 0 var(--space-1); color: var(--text-secondary); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; }
 .sidebar a { display: block; padding: 0.55rem 0.75rem; border-radius: 8px; color: var(--text-secondary); font-size: 0.9rem; }
@@ -52,8 +63,10 @@ main { min-width: 0; padding: clamp(1.5rem, 4vw, 4rem); outline: none; }
   .brand { display: none; }
   .theme { font-size: 0; }
   .theme::after { content: "主题"; font-size: 0.85rem; }
-  .shell { display: block; }
+  .shell { display: block; min-height: auto; }
+  .sidebar-toggle { display: none; }
   .sidebar { position: fixed; z-index: 25; inset: 60px auto 0 0; width: min(300px, 86vw); height: auto; background: var(--surface); transform: translateX(-105%); transition: transform 180ms ease; box-shadow: var(--shadow-overlay); }
+  .shell.sidebar-collapsed .sidebar { width: min(300px, 86vw); padding: var(--space-4); opacity: 1; pointer-events: auto; }
   .sidebar.open { transform: translateX(0); }
   main { padding: var(--space-4) var(--space-3); }
   .page-header .favorite-toggle { margin-left: 0; }

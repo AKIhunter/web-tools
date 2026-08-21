@@ -13,7 +13,7 @@ export type ToolDefinition = {
 };
 
 export const tools: ToolDefinition[] = [
-  { route: '#/json', category: '数据格式', title: 'JSON 工具', description: '校验、格式化、压缩、转义与键排序', keywords: ['json', '格式化', '压缩', '校验'], aliases: ['json formatter', 'json beautifier'], icon: '{}', tags: ['结构化数据', '格式化'], privacyLevel: 'local-only', featured: true },
+  { route: '#/json', category: '数据格式', title: 'JSON 工具', description: '校验、格式化、压缩、转义、键排序与双 JSON 对比', keywords: ['json', '格式化', '压缩', '校验', '对比', 'diff'], aliases: ['json formatter', 'json beautifier', 'json diff', 'json compare'], icon: '{}', tags: ['结构化数据', '格式化', '对比'], privacyLevel: 'local-only', featured: true },
   { route: '#/codec/url', category: '编码解码', title: 'URL 编解码', description: 'URI 组件、完整 URL 与查询参数', keywords: ['url', 'encode', 'query'], aliases: ['url encode', 'url decode', 'percent encoding'], icon: '%', tags: ['URL', '查询参数'], privacyLevel: 'local-only', featured: true },
   { route: '#/codec/unicode', category: '编码解码', title: 'Unicode 工具', description: 'Unicode 转义与 UTF-8 字节', keywords: ['unicode', 'utf8', '转义'], aliases: ['unicode escape', 'utf-8 hex'], icon: 'U+', tags: ['字符集', '转义'], privacyLevel: 'local-only' },
   { route: '#/base64/text', category: '编码解码', title: 'Base64 文本', description: 'UTF-8 文本与 Base64URL 往返', keywords: ['base64', '文本', '编码'], aliases: ['base64url', 'b64'], icon: '64', tags: ['文本', 'Base64'], privacyLevel: 'local-only', featured: true },

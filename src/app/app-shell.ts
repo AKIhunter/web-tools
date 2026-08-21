@@ -24,7 +24,7 @@ export class AppShell {
   constructor(private root: HTMLElement) {
     root.innerHTML = `
       <header class="topbar"><button class="menu" type="button" aria-label="打开导航">☰</button><a class="brand" href="#/">Web Toolbox</a><label class="search"><span class="sr-only">搜索工具</span><input type="search" placeholder="搜索工具…" autocomplete="off"></label><button class="theme" type="button"></button></header>
-      <div class="shell"><aside class="sidebar" aria-label="工具导航"></aside><main id="main" tabindex="-1"></main></div>
+      <div class="shell"><aside class="sidebar" aria-label="工具导航"></aside><button class="sidebar-toggle" type="button" aria-label="隐藏目录" aria-expanded="true">‹</button><main id="main" tabindex="-1"></main></div>
       <div class="sidebar-backdrop" hidden></div><div class="search-results" hidden></div><div class="toast" role="status" aria-live="polite"></div>`;
     this.main = root.querySelector('main')!;
     this.searchResults = root.querySelector('.search-results')!;
@@ -51,6 +51,15 @@ export class AppShell {
     const sidebar = this.root.querySelector<HTMLElement>('.sidebar')!;
     const backdrop = this.root.querySelector<HTMLElement>('.sidebar-backdrop')!;
     const menu = this.root.querySelector<HTMLButtonElement>('.menu')!;
+    const shell = this.root.querySelector<HTMLElement>('.shell')!;
+    const sidebarToggle = this.root.querySelector<HTMLButtonElement>('.sidebar-toggle')!;
+    const setSidebarCollapsed = (collapsed: boolean) => {
+      shell.classList.toggle('sidebar-collapsed', collapsed);
+      sidebarToggle.textContent = collapsed ? '›' : '‹';
+      sidebarToggle.setAttribute('aria-label', collapsed ? '显示目录' : '隐藏目录');
+      sidebarToggle.setAttribute('aria-expanded', String(!collapsed));
+    };
+    sidebarToggle.addEventListener('click', () => setSidebarCollapsed(!shell.classList.contains('sidebar-collapsed')));
     const closeSidebar = (restoreFocus = true) => {
       sidebar.classList.remove('open');
       backdrop.hidden = true;

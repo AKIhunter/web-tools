@@ -41,6 +41,19 @@ textarea[readonly] { color: var(--text); }
 .json-token.number { color: var(--json-number); }
 .json-token.boolean, .json-token.null { color: var(--json-literal); font-weight: 650; }
 .json-token.punctuation { color: var(--json-punctuation); }
+.json-compare-tool { display: grid; gap: var(--space-3); }
+.json-compare-inputs, .json-compare-result { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.json-compare-editor { display: flex; flex-direction: column; gap: var(--space-1); font-weight: 650; }
+.json-compare-editor textarea { min-height: 280px; }
+.json-compare-column { min-width: 0; padding: var(--space-3); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-soft); }
+.json-compare-column h2 { margin: 0 0 var(--space-2); font-size: 0.92rem; }
+.json-compare-lines { max-height: 680px; overflow: auto; font-family: var(--font-mono); font-size: 0.9rem; line-height: 1.55; }
+.json-compare-line { display: grid; grid-template-columns: 4.5ch minmax(0, 1fr); min-height: 1.55em; }
+.json-compare-line.empty { color: var(--text-secondary); }
+.json-compare-line.line-different .line-code { text-decoration: underline wavy var(--error); text-underline-offset: 0.2em; }
+.json-compare-line .line-number { user-select: none; padding-right: var(--space-2); color: var(--text-secondary); text-align: right; border-right: 1px solid color-mix(in srgb, var(--border) 70%, transparent); }
+.json-compare-line .line-code { min-width: 0; padding-left: var(--space-2); white-space: pre; overflow-wrap: normal; }
+.json-token.diff-segment { text-decoration: underline wavy var(--error); text-decoration-thickness: 1.5px; text-underline-offset: 0.22em; }
 .sql-tool-layout { display: grid; gap: var(--space-3); }
 .sql-tool-layout .workbench textarea { min-height: 320px; }
 .sql-result-panel { display: flex; flex-direction: column; gap: var(--space-1); font-weight: 650; }
@@ -64,7 +77,7 @@ textarea[readonly] { color: var(--text); }
 [hidden] { display: none !important; }
 
 @media (max-width: 900px) {
-  .editor-grid, .image-compare { grid-template-columns: 1fr; }
+  .editor-grid, .image-compare, .json-compare-inputs, .json-compare-result { grid-template-columns: 1fr; }
   textarea { min-height: 260px; }
 }
 
