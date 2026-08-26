@@ -11,7 +11,10 @@
     "typecheck": "tsc --noEmit",
     "deploy": "wrangler deploy"
   },
-  "dependencies": {},
+  "dependencies": {
+    "pdfjs-dist": "^6.2.108",
+    "tesseract.js": "^7.0.0"
+  },
   "devDependencies": {
     "typescript": "^5.8.3",
     "vite": "^6.3.5",

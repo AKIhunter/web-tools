@@ -74,11 +74,21 @@ textarea[readonly] { color: var(--text); }
 .image-compare figcaption { margin-bottom: var(--space-2); font-weight: 650; }
 .image-compare img { display: block; width: 100%; height: 320px; object-fit: contain; }
 .download { display: inline-flex; align-items: center; margin-top: var(--space-3); }
+.ocr-tool { display: grid; gap: var(--space-3); }
+.ocr-layout { display: grid; grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.2fr); gap: var(--space-3); align-items: start; }
+.ocr-input-panel, .ocr-output-panel { min-width: 0; }
+.ocr-drop { margin-bottom: var(--space-3); }
+.ocr-meta { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--space-1) var(--space-2); margin: 0; color: var(--text-secondary); font-size: 0.86rem; }
+.ocr-meta dt { font-weight: 650; color: var(--text); }
+.ocr-meta dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.ocr-progress { min-height: 1.4em; margin: var(--space-3) 0 0; color: var(--text-secondary); }
+.ocr-output { min-height: 520px; }
 [hidden] { display: none !important; }
 
 @media (max-width: 900px) {
-  .editor-grid, .image-compare, .json-compare-inputs, .json-compare-result { grid-template-columns: 1fr; }
+  .editor-grid, .image-compare, .json-compare-inputs, .json-compare-result, .ocr-layout { grid-template-columns: 1fr; }
   textarea { min-height: 260px; }
+  .ocr-output { min-height: 340px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

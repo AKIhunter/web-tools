@@ -7,6 +7,7 @@ import { randomPlugin, uuidPlugin } from '../tools/generator/generator-plugin';
 import { imageCompressPlugin } from '../tools/image/image-plugin';
 import { jsonPlugin } from '../tools/json/json-plugin';
 import { jwtPlugin } from '../tools/jwt/jwt-plugin';
+import { ocrPlugin } from '../tools/ocr/ocr-plugin';
 import { sqlPlugin } from '../tools/sql/sql-plugin';
 import { casePlugin } from '../tools/text/text-plugin';
 import { timestampPlugin } from '../tools/timestamp/timestamp-plugin';
@@ -27,5 +28,6 @@ export const plugins: ToolPlugin[] = [
   timestampPlugin,
   imageCompressPlugin,
   colorPlugin,
+  ocrPlugin,
   sqlPlugin,
 ];

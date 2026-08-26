@@ -2,7 +2,7 @@
 
 ## 总体架构
 
-项目采用 Vite + Vanilla TypeScript + 原生 CSS。运行时不依赖后端，所有工具输入都在浏览器本地处理。
+项目采用 Vite + Vanilla TypeScript + 原生 CSS。运行时不依赖后端，所有工具输入都在浏览器本地处理。PDF/图片 OCR 使用随站点部署的 `pdfjs-dist`、`tesseract.js`、WASM 和中英文语言数据资源，不上传用户文件或识别文本。
 
 核心代码分层：
 
@@ -21,6 +21,7 @@
 3. 在 `src/app/plugins.ts` 中加入插件。
 4. 在 `tests/` 中补 service 测试。
 5. 更新 `README.md` 功能清单。
+6. 若工具需要静态运行资源，放入 `public/` 并在 README 中说明隐私和部署边界。
 
 ## JSON 工具
 
@@ -274,6 +275,33 @@
 
 - `tests/image-service.test.ts`
 
+## PDF / 图片 OCR
+
+代码入口：
+
+- `src/tools/ocr/ocr-plugin.ts`
+- `src/tools/ocr/ocr-service.ts`
+- `public/ocr/pdf.worker.min.mjs`
+- `public/ocr/tesseract/worker.min.js`
+- `public/ocr/tesseract-core/*`
+- `public/ocr/tessdata/eng.traineddata.gz`
+- `public/ocr/tessdata/chi_sim.traineddata.gz`
+
+逻辑说明：
+
+- `ocr-plugin.ts` 注册路由 `#/ocr`，提供 PDF/图片文件选择、识别进度、格式化文本输出、复制、清空和 TXT 下载。
+- `ocr-service.ts` 负责文件类型判断、大小限制、PDF 页数限制、Canvas 像素限制和识别结果格式化。
+- PDF 文件通过 `pdfjs-dist` 在浏览器中渲染为 Canvas，再逐页交给 Tesseract worker 识别。
+- 图片文件通过 `createImageBitmap` 解码，必要时按最大像素限制缩放到 Canvas 后识别。
+- OCR 默认语言为中文简体 + 英文，语言数据从本站 `public/ocr/tessdata/` 加载。
+- Tesseract worker、core 和 wasm 也从本站 `public/ocr/` 加载，避免默认 CDN 请求。
+- 输出按 Markdown 风格整理，包含文件标题、文件类型、页数和 `## 第 N 页` 分段。
+- 页面切换或清空时会中止当前识别任务，并释放用于 TXT 下载的 Object URL。
+
+测试入口：
+
+- `tests/ocr-service.test.ts`
+
 ## 颜色转换器
 
 代码入口：
@@ -330,4 +358,3 @@
 - Tool Registry 根据插件元数据实现分类、查找和搜索排序。
 - Clipboard 封装复制能力，复制失败时回退到选中文本。
 - Object URL Store 统一管理 Blob URL 生命周期。
-
