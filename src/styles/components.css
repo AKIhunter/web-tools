@@ -74,6 +74,22 @@ textarea[readonly] { color: var(--text); }
 .image-compare figcaption { margin-bottom: var(--space-2); font-weight: 650; }
 .image-compare img { display: block; width: 100%; height: 320px; object-fit: contain; }
 .download { display: inline-flex; align-items: center; margin-top: var(--space-3); }
+.cutout-tool { display: grid; gap: var(--space-3); }
+.cutout-toolbar { display: grid; gap: var(--space-2); }
+.cutout-field { display: flex; flex-direction: column; gap: var(--space-1); color: var(--text-secondary); font-size: 0.82rem; }
+.cutout-field .drop-zone { min-height: var(--control-height); margin: 0; padding: var(--space-2); }
+.segmented { display: inline-flex; flex-wrap: wrap; gap: 0; align-items: center; width: fit-content; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-small); }
+.segmented button { min-height: var(--control-height); border: 0; border-radius: 0; background: var(--surface); }
+.segmented button + button { border-left: 1px solid var(--border); }
+.segmented button[aria-pressed="true"] { color: var(--surface); background: var(--accent); }
+.cutout-canvas-shell { min-width: 0; padding: var(--space-3); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.cutout-canvas-wrap { width: min(100%, 1080px); min-height: 280px; max-height: 72vh; margin: 0 auto; overflow: auto; background-color: var(--surface-secondary); background-image: linear-gradient(45deg, var(--border) 25%, transparent 25%), linear-gradient(-45deg, var(--border) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, var(--border) 75%), linear-gradient(-45deg, transparent 75%, var(--border) 75%); background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0; border-radius: var(--radius-small); }
+.cutout-stage { position: relative; min-width: 100%; min-height: 280px; }
+.cutout-canvas, .cutout-overlay { display: block; max-width: none; max-height: none; object-fit: contain; }
+.cutout-overlay { position: absolute; top: 0; left: 0; touch-action: none; cursor: crosshair; }
+.cutout-canvas-wrap.is-panning, .cutout-canvas-wrap.is-panning .cutout-overlay { cursor: grabbing; }
+.cutout-shortcuts { margin: 0; color: var(--text-secondary); font-size: 0.86rem; }
+.cutout-status { min-height: 1.4em; margin: 0; color: var(--text-secondary); }
 .ocr-tool { display: grid; gap: var(--space-3); }
 .ocr-layout { display: grid; grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.2fr); gap: var(--space-3); align-items: start; }
 .ocr-input-panel, .ocr-output-panel { min-width: 0; }

@@ -275,6 +275,31 @@
 
 - `tests/image-service.test.ts`
 
+## 图片抠图
+
+代码入口：
+
+- `src/tools/cutout/cutout-plugin.ts`
+- `src/tools/cutout/cutout-service.ts`
+
+逻辑说明：
+
+- `cutout-plugin.ts` 注册路由 `#/image/cutout`，提供 PNG/JPG/JPEG/WebP 上传、工具模式切换、容差调节、画布缩放、中键平移、删除选区、撤销和导出 PNG。
+- 页面使用主 canvas 绘制当前图片，使用 overlay canvas 绘制半透明选区预览，透明区域通过棋盘格背景辅助观察。
+- 魔棒模式点击图片色块后，`cutout-service.ts` 使用 4 向 flood fill 从点击点扩散，只选择与点击像素颜色接近且连通的区域。
+- 魔棒容差范围为 0 到 255，默认 30；滑块和数字输入框同步，已有魔棒采样点时拖动滑块会实时刷新选区。
+- 矩形模式根据拖拽起终点生成裁剪到图片边界内的矩形 mask。
+- 圆形模式根据拖拽外接矩形生成椭圆 mask。
+- 画布缩放只改变 canvas 的 CSS 展示尺寸，不改变底层 `ImageData` 像素；点击坐标通过 overlay canvas 的 `getBoundingClientRect()` 映射回真实像素。
+- 鼠标中键按下时记录展示区滚动位置，移动时更新 `scrollLeft` 和 `scrollTop`；鼠标移出画布后仍通过 `window` 级 `mousemove` 持续平移，松开中键后结束拖拽。
+- 删除选区时复制当前 `ImageData`，把选区 mask 对应像素的 alpha 改为 0，不改变 RGB 值。
+- 删除前将当前图片状态压入撤销栈，最多保留 20 步；`Ctrl+Z` / `Command+Z` 和撤销按钮都可恢复上一步，`Ctrl/Command + 滚轮` 可缩放展示区图片，中键拖拽只改变视口查看位置。
+- 导出时使用 `canvas.toBlob('image/png')` 生成透明 PNG，文件名追加 `-cutout.png`。
+
+测试入口：
+
+- `tests/cutout-service.test.ts`
+
 ## PDF / 图片 OCR
 
 代码入口：
