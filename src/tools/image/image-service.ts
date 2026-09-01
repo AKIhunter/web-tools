@@ -8,10 +8,74 @@ export type CompressOptions = ResizeOptions & {
   mime: 'image/jpeg' | 'image/png' | 'image/webp';
   quality: number;
   background: string;
+  exactSize?: boolean;
 };
+
+export type CompressionPreset = '75' | '50' | '30' | '25' | '15' | '10' | 'extreme';
+export type ProcessingQuality = 'high' | 'balanced' | 'performance';
+
+export function presetLabel(preset: CompressionPreset): string {
+  if (preset === 'extreme') return '极限压缩';
+  return `${preset}%`;
+}
+
+export function qualityFromProcessing(processing: ProcessingQuality): number {
+  if (processing === 'high') return 0.92;
+  if (processing === 'balanced') return 0.6;
+  return 0.3;
+}
+
+export function optionsFromPreset(
+  width: number,
+  height: number,
+  preset: CompressionPreset,
+  mime: CompressOptions['mime'],
+  background: string,
+  processing: ProcessingQuality = 'balanced',
+): CompressOptions {
+  if (width <= 0 || height <= 0) throw new Error('尺寸必须大于 0');
+  if (preset === 'extreme') {
+    const longest = Math.max(width, height);
+    const ratio = Math.min(1, 640 / longest, 0.25);
+    return {
+      maxWidth: Math.max(1, Math.round(width * ratio)),
+      maxHeight: Math.max(1, Math.round(height * ratio)),
+      mime,
+      quality: 0.2,
+      background,
+    };
+  }
+  const ratio = Number(preset) / 100;
+  return {
+    maxWidth: Math.max(1, Math.round(width * ratio)),
+    maxHeight: Math.max(1, Math.round(height * ratio)),
+    mime,
+    quality: qualityFromProcessing(processing),
+    background,
+  };
+}
+
+export function optionsFromPixels(
+  width: number,
+  height: number,
+  mime: CompressOptions['mime'],
+  background: string,
+  processing: ProcessingQuality = 'balanced',
+): CompressOptions {
+  if (width <= 0 || height <= 0) throw new Error('尺寸必须大于 0');
+  return {
+    maxWidth: Math.max(1, Math.round(width)),
+    maxHeight: Math.max(1, Math.round(height)),
+    mime,
+    quality: qualityFromProcessing(processing),
+    background,
+    exactSize: true,
+  };
+}
 
 export function calculateSize(width: number, height: number, options: ResizeOptions): { width: number; height: number } {
   if (width <= 0 || height <= 0 || options.maxWidth <= 0 || options.maxHeight <= 0) throw new Error('尺寸必须大于 0');
+  if ('exactSize' in options && options.exactSize) return { width: Math.round(options.maxWidth), height: Math.round(options.maxHeight) };
   const ratio = Math.min(options.maxWidth / width, options.maxHeight / height);
   const scale = options.allowUpscale ? ratio : Math.min(1, ratio);
   return { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)) };

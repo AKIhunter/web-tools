@@ -135,7 +135,7 @@ export class AppShell {
       const title = document.createElement('strong');
       title.textContent = '没有匹配的工具';
       const suggestion = document.createElement('span');
-      suggestion.textContent = '试试 JSON、Base64、时间戳、UUID、密码或图片压缩。';
+      suggestion.textContent = '试试 JSON、Base64、时间戳、UUID、密码或图片加工。';
       empty.append(title, suggestion);
       this.searchResults.append(empty);
       return;
