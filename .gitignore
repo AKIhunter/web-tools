@@ -24,5 +24,6 @@ TestResults.xml
 
 node_modules/
 dist/
+.trae/documents/
 .DS_Store
 *.log
