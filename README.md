@@ -11,7 +11,7 @@
 - 加密与安全：SHA-256/384/512、HMAC-SHA-256、PBKDF2 + AES-256-GCM
 - 生成器：纯前端 UUID v4、ULID、随机 Token、十六进制串、数字串与可配置密码
 - 文本处理：camelCase、PascalCase、snake_case、kebab-case、CONSTANT_CASE、Title Case 与 dot.case 命名转换
-- 时间与日期：秒/毫秒识别、本地时间、UTC ISO 与相对时间
+- 时间与日期：5 条批量时间戳转换、秒/毫秒识别、日期时间转时间戳、全局时区联动、UTC ISO 与相对时间
 - 图片与颜色：JPEG/PNG/WebP 缩放、质量控制、前后预览与下载，PNG/JPG/JPEG/WebP 图片抠图、画布缩放、中键平移与透明 PNG 导出，PDF/图片 OCR 文字识别，HEX、RGB/RGBA、HSL/HSLA 颜色转换
 - 开发辅助：MySQL、ClickHouse、Doris、PostgreSQL 等 SQL 格式化与 Redis 命令格式化，高亮展示关键字、函数和值
 
