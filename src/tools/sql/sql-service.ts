@@ -1,5 +1,7 @@
 export type SqlDialect = 'auto' | 'mysql' | 'clickhouse' | 'doris' | 'postgresql' | 'redis';
 
+export type SqlToolMode = 'format' | 'dsl';
+
 export type SqlTokenKind =
   | 'keyword'
   | 'function'
@@ -56,6 +58,25 @@ const REDIS_COMMANDS = new Set([
   'RENAME', 'SADD', 'SCAN', 'SELECT', 'SET', 'SETEX', 'SISMEMBER', 'SMEMBERS', 'SREM', 'TTL',
   'TYPE', 'XADD', 'XGROUP', 'XREAD', 'ZADD', 'ZRANGE', 'ZREM',
 ]);
+
+const DSL_OPERATOR_MAP: Record<string, string> = {
+  eq: '=',
+  '=': '=',
+  ne: '<>',
+  neq: '<>',
+  '!=': '<>',
+  '<>': '<>',
+  gt: '>',
+  '>': '>',
+  gte: '>=',
+  '>=': '>=',
+  lt: '<',
+  '<': '<',
+  lte: '<=',
+  '<=': '<=',
+  match: 'LIKE',
+  like: 'LIKE',
+};
 
 function unit(indent: 2 | 4 | '\t'): string {
   return indent === '\t' ? '\t' : ' '.repeat(indent);
@@ -316,6 +337,201 @@ function formatRedis(input: string, indent: 2 | 4 | '\t'): string {
 function isRedisInput(input: string): boolean {
   const first = input.trim().split(/\s+/)[0]?.toUpperCase();
   return Boolean(first && REDIS_COMMANDS.has(first) && !/\bSELECT\b[\s\S]*\bFROM\b/i.test(input));
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function sqlIdentifier(value: unknown, label: string): string {
+  if (typeof value !== 'string' || !value.trim()) throw new Error(`DSL 缺少有效的 ${label}`);
+  const trimmed = value.trim();
+  if (trimmed === '*') return trimmed;
+  if (!/^[A-Za-z_][A-Za-z0-9_.$]*$/.test(trimmed)) throw new Error(`${label} 只能包含字母、数字、下划线、点号和 $`);
+  return trimmed;
+}
+
+function sqlLiteral(value: unknown): string {
+  if (value === null) return 'NULL';
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) throw new Error('DSL 中包含无效数字');
+    return String(value);
+  }
+  if (typeof value === 'boolean') return value ? 'TRUE' : 'FALSE';
+  if (typeof value === 'string') return `'${value.replace(/'/g, "''")}'`;
+  throw new Error('DSL 条件值只支持字符串、数字、布尔值、null 或数组');
+}
+
+function wrapCondition(value: string): string {
+  return value.includes(' AND ') || value.includes(' OR ') ? `(${value})` : value;
+}
+
+function joinConditions(items: unknown, operator: 'AND' | 'OR'): string {
+  if (!Array.isArray(items)) throw new Error(`DSL ${operator} 条件必须是数组`);
+  const parts = items.map((item) => buildWhereClause(item)).filter(Boolean).map(wrapCondition);
+  return parts.join(` ${operator} `);
+}
+
+function buildFieldCondition(fieldName: string, condition: unknown): string {
+  const field = sqlIdentifier(fieldName, '字段名');
+
+  if (Array.isArray(condition)) {
+    if (!condition.length) throw new Error(`字段 ${field} 的 IN 条件不能为空`);
+    return `${field} IN (${condition.map(sqlLiteral).join(', ')})`;
+  }
+
+  if (!isPlainRecord(condition)) {
+    return condition === null ? `${field} IS NULL` : `${field} = ${sqlLiteral(condition)}`;
+  }
+
+  const parts = Object.entries(condition).map(([operator, rawValue]) => {
+    const normalized = operator.replace(/^\$/, '').toLowerCase();
+    if (normalized === 'in') {
+      if (!Array.isArray(rawValue) || !rawValue.length) throw new Error(`字段 ${field} 的 IN 条件不能为空`);
+      return `${field} IN (${rawValue.map(sqlLiteral).join(', ')})`;
+    }
+    if (normalized === 'notin' || normalized === 'not_in') {
+      if (!Array.isArray(rawValue) || !rawValue.length) throw new Error(`字段 ${field} 的 NOT IN 条件不能为空`);
+      return `${field} NOT IN (${rawValue.map(sqlLiteral).join(', ')})`;
+    }
+    if (normalized === 'between') {
+      if (!Array.isArray(rawValue) || rawValue.length !== 2) throw new Error(`字段 ${field} 的 BETWEEN 条件必须包含两个值`);
+      return `${field} BETWEEN ${sqlLiteral(rawValue[0])} AND ${sqlLiteral(rawValue[1])}`;
+    }
+    if (normalized === 'isnull' || normalized === 'is_null') {
+      return rawValue ? `${field} IS NULL` : `${field} IS NOT NULL`;
+    }
+    const sqlOperator = DSL_OPERATOR_MAP[normalized];
+    if (!sqlOperator) throw new Error(`暂不支持 DSL 操作符：${operator}`);
+    return `${field} ${sqlOperator} ${sqlLiteral(sqlOperator === 'LIKE' && typeof rawValue === 'string' && !/[%_]/.test(rawValue) ? `%${rawValue}%` : rawValue)}`;
+  });
+  return parts.join(' AND ');
+}
+
+function buildWhereClause(where: unknown): string {
+  if (!where) return '';
+  if (!isPlainRecord(where)) throw new Error('DSL where/query 必须是对象');
+
+  const parts = Object.entries(where).map(([key, value]) => {
+    if (key === '$and' || key.toLowerCase() === 'and') return wrapCondition(joinConditions(value, 'AND'));
+    if (key === '$or' || key.toLowerCase() === 'or') return wrapCondition(joinConditions(value, 'OR'));
+    if (key === '$not' || key.toLowerCase() === 'not') return `NOT ${wrapCondition(buildWhereClause(value))}`;
+    return buildFieldCondition(key, value);
+  }).filter(Boolean);
+
+  return parts.join(' AND ');
+}
+
+function buildEsQueryClause(query: unknown): string {
+  if (!query) return '';
+  if (!isPlainRecord(query)) throw new Error('Elasticsearch DSL query 必须是对象');
+
+  if (isPlainRecord(query.bool)) {
+    const bool = query.bool;
+    const parts: string[] = [];
+    const toArray = (value: unknown) => Array.isArray(value) ? value : [value];
+    const joinEsConditions = (value: unknown, operator: 'AND' | 'OR') => toArray(value).map((item) => buildEsQueryClause(item)).filter(Boolean).map(wrapCondition).join(` ${operator} `);
+    if (bool.must) parts.push(joinEsConditions(bool.must, 'AND'));
+    if (bool.filter) parts.push(joinEsConditions(bool.filter, 'AND'));
+    if (bool.should) parts.push(joinEsConditions(bool.should, 'OR'));
+    if (bool.must_not) parts.push(`NOT ${wrapCondition(joinEsConditions(bool.must_not, 'AND'))}`);
+    return parts.filter(Boolean).map(wrapCondition).join(' AND ');
+  }
+
+  if (isPlainRecord(query.term)) {
+    const [[field, value]] = Object.entries(query.term);
+    return buildFieldCondition(field, value);
+  }
+  if (isPlainRecord(query.terms)) {
+    const [[field, value]] = Object.entries(query.terms);
+    return buildFieldCondition(field, Array.isArray(value) ? value : [value]);
+  }
+  if (isPlainRecord(query.range)) {
+    const [[field, value]] = Object.entries(query.range);
+    return buildFieldCondition(field, value);
+  }
+  if (isPlainRecord(query.match) || isPlainRecord(query.match_phrase)) {
+    const source = isPlainRecord(query.match) ? query.match : query.match_phrase;
+    if (!isPlainRecord(source)) throw new Error('Elasticsearch match DSL 必须是对象');
+    const [[field, value]] = Object.entries(source);
+    return buildFieldCondition(field, { like: value });
+  }
+  if (isPlainRecord(query.exists)) {
+    return buildFieldCondition(String(query.exists.field ?? ''), { isNull: false });
+  }
+  if (isPlainRecord(query.prefix) || isPlainRecord(query.wildcard)) {
+    const source = isPlainRecord(query.prefix) ? query.prefix : query.wildcard;
+    if (!isPlainRecord(source)) throw new Error('Elasticsearch prefix/wildcard DSL 必须是对象');
+    const [[field, value]] = Object.entries(source);
+    return buildFieldCondition(field, { like: String(value).replace(/\*/g, '%') });
+  }
+
+  return buildWhereClause(query);
+}
+
+function selectList(dsl: Record<string, unknown>): string {
+  const source = dsl.select ?? dsl.fields ?? dsl._source;
+  if (!source || source === true) return '*';
+  if (source === false) return '*';
+  if (typeof source === 'string') return source === '*' ? '*' : sqlIdentifier(source, '查询字段');
+  if (Array.isArray(source)) {
+    if (!source.length) return '*';
+    return source.map((item) => sqlIdentifier(item, '查询字段')).join(', ');
+  }
+  throw new Error('DSL select/_source 必须是字符串或数组');
+}
+
+function orderByClause(value: unknown): string {
+  if (!value) return '';
+  const entries = Array.isArray(value) ? value : [value];
+  const parts = entries.map((entry) => {
+    if (typeof entry === 'string') return sqlIdentifier(entry, '排序字段');
+    if (!isPlainRecord(entry)) throw new Error('DSL orderBy/sort 必须是字符串、对象或数组');
+    if ('field' in entry) {
+      const direction = String(entry.direction ?? entry.order ?? 'ASC').toUpperCase();
+      if (!['ASC', 'DESC'].includes(direction)) throw new Error('排序方向只支持 ASC 或 DESC');
+      return `${sqlIdentifier(entry.field, '排序字段')} ${direction}`;
+    }
+    const [[field, config]] = Object.entries(entry);
+    const direction = isPlainRecord(config) ? String(config.order ?? 'ASC').toUpperCase() : String(config ?? 'ASC').toUpperCase();
+    if (!['ASC', 'DESC'].includes(direction)) throw new Error('排序方向只支持 ASC 或 DESC');
+    return `${sqlIdentifier(field, '排序字段')} ${direction}`;
+  });
+  return parts.join(', ');
+}
+
+function positiveInteger(value: unknown, label: string): number | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) throw new Error(`${label} 必须是非负整数`);
+  return value;
+}
+
+export function dslToSql(input: string, indent: 2 | 4 | '\t' = 2): string {
+  const value = input.trim();
+  if (!value) throw new Error('请输入 JSON DSL');
+  if (value.length > 1_000_000) throw new Error('文本超过 1 MB 限制');
+
+  let dsl: unknown;
+  try {
+    dsl = JSON.parse(value);
+  } catch {
+    throw new Error('DSL 必须是合法 JSON');
+  }
+  if (!isPlainRecord(dsl)) throw new Error('DSL 根节点必须是对象');
+
+  const tableSource = dsl.table ?? dsl.index ?? (typeof dsl.from === 'string' ? dsl.from : undefined);
+  const table = sqlIdentifier(tableSource, 'table/from/index');
+  const where = dsl.where ? buildWhereClause(dsl.where) : buildEsQueryClause(dsl.query);
+  const orderBy = orderByClause(dsl.orderBy ?? dsl.sort);
+  const limit = positiveInteger(dsl.limit ?? dsl.size, 'limit/size');
+  const offset = positiveInteger(dsl.offset ?? (typeof dsl.from === 'number' ? dsl.from : undefined), 'offset/from');
+  const lines = [`SELECT ${selectList(dsl)}`, `FROM ${table}`];
+  if (where) lines.push(`WHERE ${where}`);
+  if (orderBy) lines.push(`ORDER BY ${orderBy}`);
+  if (limit !== undefined) lines.push(`LIMIT ${limit}`);
+  if (offset !== undefined) lines.push(`OFFSET ${offset}`);
+
+  return formatSql(`${lines.join(' ')};`, indent);
 }
 
 export function formatDatabaseText(input: string, dialect: SqlDialect = 'auto', indent: 2 | 4 | '\t' = 2): string {

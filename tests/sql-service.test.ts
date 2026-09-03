@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDatabaseText, tokenizeDatabaseForHighlight } from '../src/tools/sql/sql-service';
+import { dslToSql, formatDatabaseText, tokenizeDatabaseForHighlight } from '../src/tools/sql/sql-service';
 
 describe('SQL service', () => {
   it('格式化 MySQL 风格 SELECT / JOIN / WHERE / GROUP BY', () => {
@@ -39,8 +39,68 @@ describe('SQL service', () => {
     expect(tokens).toContainEqual({ kind: 'string', value: '\'Aki\'' });
   });
 
+  it('将 JSON 查询 DSL 解析为 SQL', () => {
+    const output = dslToSql(JSON.stringify({
+      table: 'users',
+      select: ['id', 'name'],
+      where: {
+        status: 1,
+        age: { gte: 18 },
+        $or: [
+          { role: 'admin' },
+          { role: 'ops' },
+        ],
+      },
+      orderBy: [{ field: 'created_at', direction: 'desc' }],
+      limit: 20,
+    }), 2);
+    expect(output).toContain('SELECT');
+    expect(output).toContain('id,');
+    expect(output).toContain('FROM');
+    expect(output).toContain('users');
+    expect(output).toContain('status = 1');
+    expect(output).toContain('age >= 18');
+    expect(output).toMatch(/\(role = 'admin'\s+OR role = 'ops'\)/);
+    expect(output).toContain('ORDER BY');
+    expect(output).toContain('created_at DESC');
+    expect(output).toContain('LIMIT');
+    expect(output).toContain('20');
+  });
+
+  it('兼容常见 Elasticsearch DSL 并解析为 SQL', () => {
+    const output = dslToSql(JSON.stringify({
+      index: 'orders',
+      _source: ['id', 'amount'],
+      query: {
+        bool: {
+          must: [
+            { term: { status: 'paid' } },
+            { range: { amount: { gt: 100 } } },
+          ],
+          must_not: { exists: { field: 'deleted_at' } },
+        },
+      },
+      sort: [{ created_at: { order: 'desc' } }],
+      size: 10,
+      from: 5,
+    }), 2);
+    expect(output).toContain('FROM');
+    expect(output).toContain('orders');
+    expect(output).toContain("status = 'paid'");
+    expect(output).toContain('amount > 100');
+    expect(output).toContain('NOT deleted_at IS NOT NULL');
+    expect(output).toContain('created_at DESC');
+    expect(output).toContain('LIMIT');
+    expect(output).toContain('10');
+    expect(output).toContain('OFFSET');
+    expect(output).toContain('5');
+  });
+
   it('拒绝空输入和过大输入', () => {
     expect(() => formatDatabaseText('')).toThrow('请输入 SQL 或 Redis 命令');
     expect(() => formatDatabaseText('x'.repeat(1_000_001))).toThrow('文本超过 1 MB 限制');
+    expect(() => dslToSql('')).toThrow('请输入 JSON DSL');
+    expect(() => dslToSql('{x}')).toThrow('DSL 必须是合法 JSON');
+    expect(() => dslToSql('{"select":["id"]}')).toThrow('DSL 缺少有效的 table/from/index');
   });
 });
