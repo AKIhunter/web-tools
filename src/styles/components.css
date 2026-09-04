@@ -110,13 +110,13 @@ textarea[readonly] { color: var(--text); }
 .timestamp-controls { margin-bottom: 0; }
 .timestamp-controls label { min-width: 160px; }
 .timestamp-rows { display: grid; gap: var(--space-1); }
-.timestamp-row { display: grid; grid-template-columns: 100px 180px; gap: var(--space-2); align-items: start; width: fit-content; padding: var(--space-2); background: var(--surface-secondary); border: 1px solid var(--border); border-radius: var(--radius-small); }
+.timestamp-row { display: grid; grid-template-columns: 200px 400px; gap: var(--space-2); align-items: start; width: fit-content; padding: var(--space-2); background: var(--surface-secondary); border: 1px solid var(--border); border-radius: var(--radius-small); }
 .timestamp-input-label, .timestamp-result-cell { display: flex; flex-direction: column; gap: 0.35rem; color: var(--text-secondary); font-size: 0.78rem; }
-.timestamp-input { width: 100px; height: 60px; min-height: 60px; padding: 0.45rem 0.5rem; font-family: var(--font-mono); font-size: 0.76rem; }
-.timestamp-result-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-1); width: 180px; min-height: 22px; }
+.timestamp-input { width: 200px; height: 60px; min-height: 60px; padding: 0.45rem 0.5rem; font-family: var(--font-mono); font-size: 0.76rem; }
+.timestamp-result-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-1); width: 400px; min-height: 22px; }
 .timestamp-follow { min-height: auto; padding: 0; gap: 0.35rem; white-space: nowrap; color: var(--text-secondary); font-size: 0.76rem; }
 .timestamp-follow input { min-height: auto; }
-.timestamp-output { width: 180px; height: 100px; min-height: 100px; max-height: 100px; overflow: auto; margin: 0; padding: 0.45rem 0.55rem; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-small); font-family: var(--font-mono); font-size: 0.72rem; line-height: 1.32; white-space: pre-wrap; }
+.timestamp-output { width: 400px; height: 100px; min-height: 100px; max-height: 100px; overflow: auto; margin: 0; padding: 0.45rem 0.55rem; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-small); font-family: var(--font-mono); font-size: 0.72rem; line-height: 1.32; white-space: pre-wrap; }
 .timestamp-output.error { color: var(--error); border-color: color-mix(in srgb, var(--error) 45%, var(--border)); }
 [hidden] { display: none !important; }
 

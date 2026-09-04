@@ -6,6 +6,7 @@ describe('Tool registry', () => {
     const routes = tools.map((tool) => tool.route);
     expect(new Set(routes).size).toBe(routes.length);
     expect(tools.every((tool) => categories.includes(tool.category))).toBe(true);
+    expect(categories.every((category) => tools.some((tool) => tool.category === category))).toBe(true);
   });
 
   it('findTool 根据 route 返回工具定义', () => {

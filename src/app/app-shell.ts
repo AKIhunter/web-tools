@@ -207,7 +207,7 @@ export class AppShell {
   private renderHome(unknown: boolean): void {
     const hero = document.createElement('section');
     hero.className = 'hero';
-    hero.innerHTML = '<span class="eyebrow">隐私优先 · 零上传</span><h1>轻量工具，留在浏览器里。</h1><p>十二个高频工具覆盖六个已开放分类。无账号、无广告，收藏与最近使用只保存工具入口，不保存输入内容。</p>';
+    hero.innerHTML = '<span class="eyebrow">隐私优先 · 零上传</span><h1>轻量工具，留在浏览器里。</h1><p>十八个高频工具覆盖八个已开放分类。无账号、无广告，收藏与最近使用只保存工具入口，不保存输入内容。</p>';
     if (unknown) {
       const notice = document.createElement('p');
       notice.className = 'notice warning alert';

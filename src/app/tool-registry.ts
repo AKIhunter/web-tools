@@ -4,7 +4,7 @@ export type { ToolDefinition } from './tool-plugin';
 
 export const tools: ToolDefinition[] = plugins.map((plugin) => plugin.definition);
 
-export const categories = ['数据格式', '编码解码', '加密与安全', '文本处理', '生成器', '时间与日期', '图片与颜色', '数据库SQL辅助', '开发辅助'];
+export const categories = ['数据格式', '编码解码', '加密与安全', '文本处理', '生成器', '时间与日期', '图片与颜色', '数据库SQL辅助'];
 
 export function findTool(hash: string): ToolDefinition | undefined {
   return tools.find((tool) => tool.route === hash);

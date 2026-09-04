@@ -13,7 +13,7 @@
 - 文本处理：camelCase、PascalCase、snake_case、kebab-case、CONSTANT_CASE、Title Case 与 dot.case 命名转换
 - 时间与日期：5 条批量时间戳转换、秒/毫秒识别、日期时间转时间戳、全局时区联动、UTC ISO 与相对时间
 - 图片与颜色：JPEG/PNG/WebP 图片加工，支持类型识别、输出格式自选、高质量/均衡/高性能处理方式、按像素或 75%/50%/30%/15% 调整尺寸、按文件大小比例或极限压缩、前后预览与下载，PNG/JPG/JPEG/WebP 图片抠图、画布缩放、中键平移与透明 PNG 导出，PDF/图片 OCR 文字识别，HEX、RGB/RGBA、HSL/HSLA 颜色转换
-- 开发辅助：MySQL、ClickHouse、Doris、PostgreSQL 等 SQL 格式化、Redis 命令格式化、JSON 查询 DSL / Elasticsearch DSL 转 SQL，高亮展示关键字、函数和值
+- 数据库SQL辅助：MySQL、ClickHouse、Doris、PostgreSQL 等 SQL 格式化、Redis 命令格式化、JSON 查询 DSL / Elasticsearch DSL 转 SQL，高亮展示关键字、函数和值
 
 当前 18 个工具覆盖 8 个已开放分类；后续会继续按插件方式补齐 Diff、正则、格式转换等纯前端工具。
 
