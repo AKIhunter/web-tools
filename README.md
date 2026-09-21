@@ -6,7 +6,7 @@
 
 - 首页：推荐工具、收藏、最近使用与分类总览；收藏和最近使用只保存工具路径，不保存输入内容
 - 搜索：支持标题、描述、分类、关键词、别名与标签匹配，支持上下键、Enter 与 Esc
-- 数据格式：JSON 校验、格式化、压缩、键排序、结构统计、key 高亮预览与双 JSON 对比
+- 数据格式：JSON 校验、宽松 JSON / KV 解析、格式化、压缩、字符串转义、结构统计、key 高亮预览与双 JSON 对比
 - 编码解码：URL 组件、完整 URL、查询参数、Unicode、UTF-8 字节、JWT 解析、Base64 文本、Base64URL、文件与 Data URL
 - 加密与安全：SHA-256/384/512、HMAC-SHA-256、PBKDF2 + AES-256-GCM
 - 生成器：纯前端 UUID v4、ULID、随机 Token、十六进制串、数字串与可配置密码
@@ -35,6 +35,15 @@ npm run build
 ```
 
 生产构建输出位于 `dist/`。项目使用 Hash 路由，可将该目录部署到任意 HTTPS 静态托管服务，不需要服务器 fallback。
+
+Cloudflare 自动部署：
+
+项目通过 GitHub Actions 在 `main` 分支 push 后自动部署到 Cloudflare Workers。需要先在 GitHub 仓库的 `Settings` → `Secrets and variables` → `Actions` 中配置：
+
+- `CLOUDFLARE_API_TOKEN`：Cloudflare API Token，至少授予目标账号的 Workers Scripts 编辑权限。
+- `CLOUDFLARE_ACCOUNT_ID`：Cloudflare 账号 ID。
+
+配置完成后，每次合并或推送到 `main` 都会执行类型检查、单元测试、生产构建和 `wrangler deploy`。本地仍可用 `npm run deploy` 手动部署，但线上稳定性不依赖浏览器登录态。
 
 ## 浏览器与部署
 

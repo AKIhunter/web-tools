@@ -31,6 +31,9 @@ textarea[readonly] { color: var(--text); }
 .notice.alert.warning:not(:empty) { background: color-mix(in srgb, var(--warning) 12%, var(--surface)); border-color: color-mix(in srgb, var(--warning) 32%, var(--border)); }
 .notice.alert.info:not(:empty) { background: color-mix(in srgb, var(--accent) 10%, var(--surface)); border-color: color-mix(in srgb, var(--accent) 28%, var(--border)); }
 .notice.alert.success:not(:empty) { background: color-mix(in srgb, var(--success) 10%, var(--surface)); border-color: color-mix(in srgb, var(--success) 28%, var(--border)); }
+.json-mode-controls { display: grid; grid-template-columns: max-content max-content; justify-content: start; }
+.json-mode-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.json-mode-action[aria-pressed="true"] { color: var(--surface); background: var(--accent); border-color: var(--accent); font-weight: 650; }
 .json-tool-layout { display: grid; gap: var(--space-3); }
 .json-tool-layout .workbench textarea { min-height: 300px; }
 .json-result-panel { display: flex; flex-direction: column; gap: var(--space-1); font-weight: 650; }
@@ -122,6 +125,7 @@ textarea[readonly] { color: var(--text); }
 
 @media (max-width: 900px) {
   .editor-grid, .image-compare, .json-compare-inputs, .json-compare-result, .ocr-layout, .timestamp-row { grid-template-columns: 1fr; }
+  .json-mode-controls { grid-template-columns: 1fr; align-items: start; }
   .timestamp-row, .timestamp-input, .timestamp-output { width: 100%; }
   textarea { min-height: 260px; }
   .ocr-output { min-height: 340px; }

@@ -1,3 +1,5 @@
+import JSON5 from 'json5';
+
 export type JsonStats = {
   topLevelType: string;
   items: number;
@@ -8,6 +10,79 @@ export type JsonStats = {
 export type JsonResult = { value: unknown; output: string; stats: JsonStats };
 
 const unsafeIntegerPattern = /(^|[^\w.])-?\d{16,}(?=\s*[,}\]])/;
+
+function splitKeyValuePairs(input: string): string[] {
+  const pairs: string[] = [];
+  let start = 0;
+  let quote = '';
+  let escaped = false;
+  let depth = 0;
+  for (let index = 0; index < input.length; index += 1) {
+    const char = input[index];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (quote && char === '\\') {
+      escaped = true;
+      continue;
+    }
+    if (char === '"' || char === '\'') {
+      quote = quote === char ? '' : quote || char;
+      continue;
+    }
+    if (quote) continue;
+    if (char === '{' || char === '[' || char === '(') depth += 1;
+    if (char === '}' || char === ']' || char === ')') depth -= 1;
+    if (depth === 0 && (char === '\n' || char === ',' || char === ';')) {
+      const pair = input.slice(start, index).trim();
+      if (pair) pairs.push(pair);
+      start = index + 1;
+    }
+  }
+  const tail = input.slice(start).trim();
+  if (tail) pairs.push(tail);
+  return pairs;
+}
+
+function parseKeyValueInput(input: string): Record<string, unknown> {
+  if (/^[{[]/.test(input.trim())) throw new Error('不是无外层括号的 KV 结构');
+  const pairs = splitKeyValuePairs(input);
+  if (!pairs.length) throw new Error('未找到 KV 数据');
+  const result = Object.create(null) as Record<string, unknown>;
+  pairs.forEach((pair) => {
+    const match = pair.match(/^(.+?)\s*[:=]\s*(.*)$/s);
+    if (!match) throw new Error(`无法识别 KV 项：${pair}`);
+    let key = match[1].trim();
+    if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith('\'') && key.endsWith('\''))) {
+      key = JSON5.parse(key) as string;
+    }
+    if (!key || /[{}\[\]]/.test(key)) throw new Error(`KV 键无效：${key || pair}`);
+    const rawValue = match[2].trim();
+    if (!rawValue) {
+      result[key] = '';
+      return;
+    }
+    try {
+      result[key] = JSON5.parse(rawValue) as unknown;
+    } catch {
+      result[key] = rawValue;
+    }
+  });
+  return result;
+}
+
+function parseJsonInput(input: string): unknown {
+  try {
+    return JSON.parse(input);
+  } catch {
+    try {
+      return JSON5.parse(input) as unknown;
+    } catch {
+      return parseKeyValueInput(input);
+    }
+  }
+}
 
 function typeOf(value: unknown): string {
   if (value === null) return 'null';
@@ -37,9 +112,9 @@ export function processJson(input: string, indent: 0 | 2 | 4 | '\t' = 2, sorted 
   if (input.length > 2_000_000) throw new Error('文本超过 2 MB 限制');
   let value: unknown;
   try {
-    value = JSON.parse(input);
+    value = parseJsonInput(input);
   } catch {
-    throw new Error('JSON 格式无效，请检查引号、逗号或括号');
+    throw new Error('JSON 或 KV 格式无效，请检查键值分隔符、引号、逗号或括号');
   }
   const outputValue = sorted ? sortKeys(value) : value;
   const items = Array.isArray(value) ? value.length : value && typeof value === 'object' ? Object.keys(value).length : 1;

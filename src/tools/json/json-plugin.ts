@@ -11,21 +11,40 @@ function select(options: Array<[string, string]>): HTMLSelectElement {
   return element;
 }
 
-function withControl(label: string, control: HTMLElement, child: HTMLElement): HTMLElement {
+function withControl(label: string, control: HTMLElement, actions: HTMLElement, child: HTMLElement): HTMLElement {
   const wrap = document.createElement('div');
   wrap.className = 'tool-page';
   const controls = document.createElement('div');
-  controls.className = 'parameters';
+  controls.className = 'parameters json-mode-controls';
   const caption = document.createElement('label');
   caption.textContent = label;
   caption.append(control);
-  controls.append(caption);
+  controls.append(caption, actions);
   wrap.append(controls, child);
   return wrap;
 }
 
 function jsonPage(): PageResult {
-  const mode = select([['2', '格式化 · 2 空格'], ['4', '格式化 · 4 空格'], ['tab', '格式化 · Tab'], ['0', '压缩'], ['sort', '键排序'], ['escape', '字符串转义'], ['unescape', '字符串去转义'], ['diff', '对比两个 JSON']]);
+  type JsonAction = 'format' | 'compress' | 'escape' | 'unescape';
+  const mode = select([['format', '格式化 · 2 空格'], ['diff', '对比 JSON']]);
+  let action: JsonAction = 'format';
+  const actionButtons = document.createElement('div');
+  actionButtons.className = 'json-mode-actions';
+  actionButtons.setAttribute('aria-label', 'JSON 处理操作');
+  const createActionButton = (value: Exclude<JsonAction, 'format'>, label: string) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'json-mode-action';
+    button.dataset.action = value;
+    button.textContent = label;
+    button.setAttribute('aria-pressed', 'false');
+    actionButtons.append(button);
+    return button;
+  };
+  const compress = createActionButton('compress', '压缩');
+  const escape = createActionButton('escape', '字符串转义');
+  const unescape = createActionButton('unescape', '去除转义');
+  const buttons = [compress, escape, unescape];
   const resultPanel = document.createElement('section');
   resultPanel.className = 'json-result-panel';
   const resultTitle = document.createElement('span');
@@ -41,7 +60,7 @@ function jsonPage(): PageResult {
     preview.replaceChildren('等待处理');
   };
   const renderPreview = (output: string) => {
-    if (mode.value === 'escape' || mode.value === 'unescape') {
+    if (action === 'escape' || action === 'unescape') {
       preview.classList.remove('empty');
       preview.replaceChildren(output);
       return;
@@ -63,10 +82,9 @@ function jsonPage(): PageResult {
     afterProcess: renderPreview,
     afterClear: clearPreview,
     process: (input) => {
-      if (mode.value === 'escape') return escapeJsonString(input);
-      if (mode.value === 'unescape') return unescapeJsonString(input);
-      const indent = mode.value === 'tab' ? '\t' : mode.value === '0' ? 0 : mode.value === '4' ? 4 : 2;
-      const result = processJson(input, indent, mode.value === 'sort');
+      if (action === 'escape') return escapeJsonString(input);
+      if (action === 'unescape') return unescapeJsonString(input);
+      const result = processJson(input, action === 'compress' ? 0 : 2);
       return result.output;
     },
   });
@@ -78,13 +96,23 @@ function jsonPage(): PageResult {
   body.append(normalBody, comparePanel);
   const updateMode = () => {
     const diffMode = mode.value === 'diff';
+    if (diffMode) action = 'format';
+    buttons.forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.action === action)));
     normalBody.hidden = diffMode;
     comparePanel.hidden = !diffMode;
     if (!diffMode) workbench.querySelector<HTMLButtonElement>('.run')?.click();
   };
+  buttons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const next = button.dataset.action as Exclude<JsonAction, 'format'>;
+      action = action === next ? 'format' : next;
+      mode.value = 'format';
+      updateMode();
+    });
+  });
   mode.addEventListener('change', updateMode);
   updateMode();
-  return { element: withControl('处理方式', mode, body) };
+  return { element: withControl('处理方式', mode, actionButtons, body) };
 }
 
 function createJsonComparePanel(): HTMLElement {
@@ -273,8 +301,8 @@ export const jsonPlugin: ToolPlugin = {
     route: '#/json',
     category: '数据格式',
     title: 'JSON 工具',
-    description: '校验、格式化、压缩、转义、键排序与双 JSON 对比',
-    keywords: ['json', '格式化', '压缩', '校验', '对比', 'diff'],
+    description: '校验、宽松解析、格式化、压缩、转义与双 JSON 对比',
+    keywords: ['json', 'kv', '宽松解析', '格式化', '压缩', '校验', '对比', 'diff'],
     aliases: ['json formatter', 'json beautifier', 'json diff', 'json compare'],
     icon: '{}',
     tags: ['结构化数据', '格式化', '对比'],

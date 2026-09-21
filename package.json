@@ -12,6 +12,7 @@
     "deploy": "wrangler deploy"
   },
   "dependencies": {
+    "json5": "^2.2.3",
     "pdfjs-dist": "^6.2.108",
     "tesseract.js": "^7.0.0"
   },
