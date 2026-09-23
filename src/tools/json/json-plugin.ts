@@ -31,7 +31,7 @@ function jsonPage(): PageResult {
   const actionButtons = document.createElement('div');
   actionButtons.className = 'json-mode-actions';
   actionButtons.setAttribute('aria-label', 'JSON 处理操作');
-  const createActionButton = (value: Exclude<JsonAction, 'format'>, label: string) => {
+  const createActionButton = (value: JsonAction, label: string) => {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'json-mode-action';
@@ -41,10 +41,11 @@ function jsonPage(): PageResult {
     actionButtons.append(button);
     return button;
   };
+  const format = createActionButton('format', '格式化');
   const compress = createActionButton('compress', '压缩');
   const escape = createActionButton('escape', '字符串转义');
   const unescape = createActionButton('unescape', '去除转义');
-  const buttons = [compress, escape, unescape];
+  const buttons = [format, compress, escape, unescape];
   const resultPanel = document.createElement('section');
   resultPanel.className = 'json-result-panel';
   const resultTitle = document.createElement('span');
@@ -104,8 +105,7 @@ function jsonPage(): PageResult {
   };
   buttons.forEach((button) => {
     button.addEventListener('click', () => {
-      const next = button.dataset.action as Exclude<JsonAction, 'format'>;
-      action = action === next ? 'format' : next;
+      action = button.dataset.action as JsonAction;
       mode.value = 'format';
       updateMode();
     });

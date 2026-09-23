@@ -72,7 +72,7 @@ function parseKeyValueInput(input: string): Record<string, unknown> {
   return result;
 }
 
-function parseJsonInput(input: string): unknown {
+function parseJsonInputDirect(input: string): unknown {
   try {
     return JSON.parse(input);
   } catch {
@@ -81,6 +81,25 @@ function parseJsonInput(input: string): unknown {
     } catch {
       return parseKeyValueInput(input);
     }
+  }
+}
+
+function looksStructured(input: string): boolean {
+  const value = input.trim();
+  return /^[{[]/.test(value) || /(^|[\n,;])\s*[^:=\n,;]+\s*[:=]/.test(value);
+}
+
+function parseJsonInput(input: string): unknown {
+  try {
+    const value = parseJsonInputDirect(input);
+    if (typeof value === 'string' && looksStructured(value)) {
+      return parseJsonInputDirect(value);
+    }
+    return value;
+  } catch (error) {
+    const unescaped = unescapeJsonString(input);
+    if (unescaped === input || !looksStructured(unescaped)) throw error;
+    return parseJsonInputDirect(unescaped);
   }
 }
 
@@ -135,8 +154,30 @@ export function escapeJsonString(input: string): string {
 }
 
 export function unescapeJsonString(input: string): string {
+  let escaped = false;
+  let quoted = '';
+  for (const char of input) {
+    if (char === '\n') {
+      quoted += '\\n';
+      escaped = false;
+      continue;
+    }
+    if (char === '\r') {
+      quoted += '\\r';
+      escaped = false;
+      continue;
+    }
+    if (char === '\t') {
+      quoted += '\\t';
+      escaped = false;
+      continue;
+    }
+    if (char === '"' && !escaped) quoted += '\\';
+    quoted += char;
+    escaped = char === '\\' ? !escaped : false;
+  }
   try {
-    return JSON.parse(`"${input}"`) as string;
+    return JSON.parse(`"${quoted}"`) as string;
   } catch {
     throw new Error('转义字符串无效');
   }

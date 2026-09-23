@@ -37,6 +37,21 @@ describe('JSON service', () => {
 
   it('处理转义并提示超安全整数', () => {
     expect(unescapeJsonString(escapeJsonString('a\n"中"'))).toBe('a\n"中"');
+    expect(unescapeJsonString('{"name":"工具箱"}')).toBe('{"name":"工具箱"}');
     expect(processJson('{"id":9007199254740993}').stats.unsafeIntegers).toBe(true);
+  });
+
+  it('格式化带转义符的 JSON 内容', () => {
+    const escaped = escapeJsonString('{"name":"工具箱","meta":{"safe":true}}');
+    expect(processJson(escaped).output).toBe(`{
+  "name": "工具箱",
+  "meta": {
+    "safe": true
+  }
+}`);
+    expect(processJson(`"${escaped}"`).value).toEqual({
+      name: '工具箱',
+      meta: { safe: true },
+    });
   });
 });
