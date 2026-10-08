@@ -54,4 +54,68 @@ describe('JSON service', () => {
       meta: { safe: true },
     });
   });
+
+  it('解析外层转义且字段内包含二次转义 JSON 的内容', () => {
+    const input = String.raw`{\"events\":[{\"event\":\"page_view\",\"local_time_ms\":1790561407110,\"params\":\"{\\\"page_name\\\":\\\"有客币\\\"}\"}],\"header\":{\"app_id\":10000069,\"app_name\":\"AI_clue\",\"client_ip\":\"122.96.25.202\",\"custom\":\"{\\\"app_business_type\\\":\\\"\\\",\\\"app_phone_number\\\":\\\"13776654690\\\",\\\"app_upload_system\\\":\\\"有客APP\\\"}\",\"device_model\":\"EMA-AL00U\",\"os_name\":\"harmonyos\",\"os_version\":\"7.0.0.105\"},\"user\":{\"user_unique_id\":\"13776654690\",\"user_unique_id_type\":\"phone\"}}`;
+    const result = processJson(input);
+    const value = result.value as {
+      events: Array<{ params: string }>;
+      header: { custom: string };
+    };
+
+    expect(JSON.parse(value.events[0].params)).toEqual({ page_name: '有客币' });
+    expect(JSON.parse(value.header.custom)).toEqual({
+      app_business_type: '',
+      app_phone_number: '13776654690',
+      app_upload_system: '有客APP',
+    });
+    expect(result.output).toContain('"event": "page_view"');
+  });
+
+  it('逐层解析字符串包裹的转义日志 JSON', () => {
+    const requestBody = String.raw`[{\"events\":[{\"event\":\"page_view\",\"params\":\"{\\\"page_name\\\":\\\"有客币\\\"}\"}],\"header\":{\"custom\":\"{\\\"app_upload_system\\\":\\\"有客APP\\\"}\"}}]`;
+    const responseBody = String.raw`{\"Type\":\"Web/Mp(MiniProgram)\",\"e\":0,\"message\":\"success\"}`;
+    const log = JSON.stringify({ request_body: requestBody, response_body: responseBody });
+    const result = processJson(JSON.stringify(log));
+    const value = result.value as { request_body: string; response_body: string };
+
+    expect(JSON.parse(unescapeJsonString(value.request_body))[0].events[0].event).toBe('page_view');
+    expect(JSON.parse(unescapeJsonString(value.response_body))).toEqual({
+      Type: 'Web/Mp(MiniProgram)',
+      e: 0,
+      message: 'success',
+    });
+    expect(result.output).toContain('"request_body"');
+  });
+
+  it('复现混合转义且缺少前缀的日志片段', () => {
+    const input = String.raw`{\"events\":[{\"event\":\"page_view\",\"local_time_ms\":1790561407110,\"params\":\"{\\\"page_name\\\":\\\"有客币\\\"}\"}],\"header\":{\"app_id\":10000069,\"app_name\":\"AI_clue\",\"client_ip\":\"122.96.25.202\",\"custom\":\"{\\\"app_business_type\\\":\\\"\\\",\\\"app_phone_number\\\":\\\"13776654690\\\",\\\"app_upload_system\\\":\\\"有客APP\\\"}\",\"device_model\":\"EMA-AL00U\",\"os_name\":\"harmonyos\",\"os_version\":\"7.0.0.105\"},\"user\":{\"user_unique_id\":\"13776654690\",\"user_unique_id_type\":\"phone\"}}]", "response_body": "{\"Type\":\"Web/Mp(MiniProgram)\",\"e\":0,\"message\":\"success\",\"sc\":1,\"server_time\":1790561407,\"tc\":1}"}`;
+    const value = processJson(input).value as { request_body: string; response_body: string };
+
+    expect(JSON.parse(value.request_body)[0].events[0].params).toBe('{"page_name":"有客币"}');
+    expect(JSON.parse(value.response_body)).toMatchObject({
+      Type: 'Web/Mp(MiniProgram)',
+      message: 'success',
+    });
+  });
+
+  it('复现截图中 request_body 内容未转义且缺少字段名前缀的日志片段', () => {
+    const input = String.raw`[{"events":[{"event":"page_view","local_time_ms":1790561407110,"params":"{\"page_name\":\"有客币\"}"}],"header":{"app_id":10000069,"app_name":"AI_clue","client_ip":"122.96.25.202","custom":"{\"app_business_type\":\"\",\"app_phone_number\":\"13776654690\",\"app_upload_system\":\"有客APP\"}","device_model":"EMA-AL00U","os_name":"harmonyos","os_version":"7.0.0.105"},"user":{"user_unique_id":"13776654690","user_unique_id_type":"phone"}}]", "response_body": "{\"Type\":\"Web/Mp(MiniProgram)\",\"e\":0,\"message\":\"success\",\"sc\":1,\"server_time\":1790561407,\"tc\":1}"}`;
+    const result = processJson(input);
+    const value = result.value as { request_body: string; response_body: string };
+    const requestBody = JSON.parse(value.request_body);
+
+    expect(requestBody[0].events[0]).toMatchObject({
+      event: 'page_view',
+      params: '{"page_name":"有客币"}',
+    });
+    expect(requestBody[0].header.custom).toBe('{"app_business_type":"","app_phone_number":"13776654690","app_upload_system":"有客APP"}');
+    expect(JSON.parse(value.response_body)).toMatchObject({
+      Type: 'Web/Mp(MiniProgram)',
+      message: 'success',
+    });
+    expect(result.output).toContain('"request_body"');
+    expect(result.output).toContain('"response_body"');
+    expect(result.output).toContain('page_view');
+  });
 });

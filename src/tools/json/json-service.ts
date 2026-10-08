@@ -89,17 +89,62 @@ function looksStructured(input: string): boolean {
   return /^[{[]/.test(value) || /(^|[\n,;])\s*[^:=\n,;]+\s*[:=]/.test(value);
 }
 
-function parseJsonInput(input: string): unknown {
-  try {
-    const value = parseJsonInputDirect(input);
-    if (typeof value === 'string' && looksStructured(value)) {
-      return parseJsonInputDirect(value);
+function normalizeEmbeddedJson(input: string, wrapArray = false): string | null {
+  // 部分日志只丢失 request_body 的数组开括号，末尾的 ] 仍然存在。
+  let candidate = wrapArray && !input.trimStart().startsWith('[') ? `[${input}` : input;
+  for (let level = 0; level < 3; level += 1) {
+    try {
+      JSON.parse(candidate);
+      return candidate;
+    } catch {
+      try {
+        const unescaped = unescapeJsonString(candidate);
+        if (unescaped === candidate) return null;
+        candidate = unescaped;
+      } catch {
+        return null;
+      }
     }
-    return value;
-  } catch (error) {
-    const unescaped = unescapeJsonString(input);
-    if (unescaped === input || !looksStructured(unescaped)) throw error;
-    return parseJsonInputDirect(unescaped);
+  }
+  return null;
+}
+
+function repairTruncatedRequestResponseLog(input: string): Record<string, string> | null {
+  const match = input.trim().match(/^(?<request>(?:\[\{|{\s*\\")[\s\S]*}\])"\s*,\s*"(?<responseKey>response_[^"]+)"\s*:\s*"(?<response>[\s\S]*)"\s*}$/);
+  if (!match?.groups) return null;
+  const request = normalizeEmbeddedJson(match.groups.request, true);
+  const response = normalizeEmbeddedJson(match.groups.response);
+  if (!request || !response) return null;
+  const requestKey = match.groups.responseKey.replace(/^response_/, 'request_');
+  return {
+    [requestKey]: request,
+    [match.groups.responseKey]: response,
+  };
+}
+
+function parseJsonInput(input: string): unknown {
+  let candidate = input;
+  let lastError: unknown;
+  for (let level = 0; level < 4; level += 1) {
+    try {
+      const value = parseJsonInputDirect(candidate);
+      if (typeof value !== 'string' || !looksStructured(value)) return value;
+      candidate = value;
+    } catch (error) {
+      lastError = error;
+      const repaired = level === 0 ? repairTruncatedRequestResponseLog(candidate) : null;
+      if (repaired) {
+        return repaired;
+      }
+      const unescaped = unescapeJsonString(candidate);
+      if (unescaped === candidate || !looksStructured(unescaped)) throw error;
+      candidate = unescaped;
+    }
+  }
+  try {
+    return parseJsonInputDirect(candidate);
+  } catch {
+    throw lastError;
   }
 }
 
