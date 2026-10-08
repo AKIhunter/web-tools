@@ -72,6 +72,75 @@ function parseKeyValueInput(input: string): Record<string, unknown> {
   return result;
 }
 
+function parseJsonSequence(input: string): unknown[] | null {
+  const values: unknown[] = [];
+  const stack: string[] = [];
+  let start = -1;
+  let quote = '';
+  let escaped = false;
+  let comment: '' | 'line' | 'block' = '';
+  let separatorPending = false;
+
+  // 按顶层括号边界切分；字符串和注释中的括号不参与结构判断。
+  for (let index = 0; index < input.length; index += 1) {
+    const char = input[index];
+    const next = input[index + 1];
+    if (comment === 'line') {
+      if (/[\r\n\u2028\u2029]/.test(char)) comment = '';
+      continue;
+    }
+    if (comment === 'block') {
+      if (char === '*' && next === '/') {
+        comment = '';
+        index += 1;
+      }
+      continue;
+    }
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (char === '\\') escaped = true;
+      else if (char === quote) quote = '';
+      continue;
+    }
+    if (char === '/' && (next === '/' || next === '*')) {
+      comment = next === '/' ? 'line' : 'block';
+      index += 1;
+      continue;
+    }
+    if (start === -1) {
+      if (/\s/.test(char)) continue;
+      if ((char === ',' || char === ';') && values.length > 0 && !separatorPending) {
+        separatorPending = true;
+        continue;
+      }
+      if (char !== '{' && char !== '[') return null;
+      start = index;
+      separatorPending = false;
+    }
+    if (char === '"' || char === "'") quote = char;
+    else if (char === '{' || char === '[') stack.push(char);
+    else if (char === '}' || char === ']') {
+      if (stack.pop() !== (char === '}' ? '{' : '[')) return null;
+      if (stack.length === 0) {
+        const segment = input.slice(start, index + 1);
+        try {
+          values.push(JSON.parse(segment));
+        } catch {
+          try {
+            values.push(JSON5.parse(segment) as unknown);
+          } catch {
+            return null;
+          }
+        }
+        start = -1;
+      }
+    }
+  }
+  // 必须完整消费所有片段，不因前面有合法对象就忽略损坏的尾部。
+  if (start !== -1 || comment === 'block' || separatorPending || values.length < 2) return null;
+  return values;
+}
+
 function parseJsonInputDirect(input: string): unknown {
   try {
     return JSON.parse(input);
@@ -79,6 +148,8 @@ function parseJsonInputDirect(input: string): unknown {
     try {
       return JSON5.parse(input) as unknown;
     } catch {
+      const sequence = parseJsonSequence(input);
+      if (sequence) return sequence;
       return parseKeyValueInput(input);
     }
   }

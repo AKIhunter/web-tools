@@ -35,6 +35,45 @@ describe('JSON service', () => {
     });
   });
 
+  it('将响应头和响应体原文按顺序格式化为数组且不丢失数据', () => {
+    const headers = `{'Server': 'volcclb', 'Date': 'Thu, 08 Oct 2026 06:27:30 GMT', 'Content-Type': 'application/json', 'Transfer-Encoding': 'chunked', 'Connection': 'keep-alive', 'Vary': 'Accept-Encoding, Accept-Encoding, Cookie, Accept-Encoding', 'X-M-Request-Start': 't=1791440850.964'}`;
+    const body = `{"code": 200, "message": "成功", "data": [{"id": 1000, "name": "test", "description": "", "status": 1, "is_all_users": true, "org": {"id": 1, "name": "默认集团", "creator": {"subject_id": 0, "origin_id": "", "subject_type": 0, "name": ""}}, "subjects": [{"type": "user", "data": {"id": 1, "super_id": "", "account": "admin", "username": "admin", "status": 1, "is_superuser": true, "email": "", "mobile_number": "", "roles": null, "groups": null, "departments": null}}, {"type": "user", "data": {"id": 2, "super_id": "", "account": "user01", "username": "秋子", "status": 1, "is_superuser": false, "email": "851911696@qq.com", "mobile_number": "", "roles": null, "groups": null, "departments": null}}], "managers": [], "subject_range": null, "dynamic_subjects": {"enabled": false}, "contain_dept_as_member": false}]}`;
+    const result = processJson(`${headers}\n${body}`);
+    expect(result.value).toEqual([processJson(headers).value, JSON.parse(body)]);
+    expect(JSON.parse(result.output)).toEqual(result.value);
+    expect(result.output).toContain('\n  {');
+    expect(result.stats).toMatchObject({ topLevelType: 'array', items: 2 });
+  });
+
+  it.each(['\n', '\r\n\r\n', ' ', '', ', ', ';\n'])('兼容以 %j 分隔的多段嵌套结构', (separator) => {
+    const first = { params: '{"text":"}][{","quote":"\\""}', path: 'C:\\test\\', items: [true, null] };
+    const second = [{ name: '中文', enabled: false }];
+    const input = JSON.stringify(first) + separator + JSON.stringify(second);
+    expect(processJson(input).value).toEqual([first, second]);
+    expect(processJson(input, 0).output).toBe(JSON.stringify([first, second]));
+  });
+
+  it('忽略字符串及 JSON5 注释中的括号，保留单引号字符串内容', () => {
+    const input = String.raw`/* }[ */ {text: 'it\'s }{', inner: {enabled: true}, /* ][ */ }
+// }{
+[{value: "// [", other: '/* } */'}] // 尾部注释`;
+    expect(processJson(input).value).toEqual([
+      { text: "it's }{", inner: { enabled: true } },
+      [{ value: '// [', other: '/* } */' }],
+    ]);
+  });
+
+  it.each(['{}\n{"a":', '{} junk {}', '{}\n[}', '{}\n{"x":"unfinished}', '{} /* unfinished', '{bad:}\n{}', '{},,{}', '{};'])(
+    '多段解析不静默丢弃无效内容：%s', (input) => {
+      expect(() => processJson(input)).toThrow('JSON 或 KV 格式无效');
+    },
+  );
+
+  it('单对象和单数组保持原有顶层类型', () => {
+    expect(processJson('{name: "test"}').value).toEqual({ name: 'test' });
+    expect(processJson('[{name: "test"}]').value).toEqual([{ name: 'test' }]);
+  });
+
   it('处理转义并提示超安全整数', () => {
     expect(unescapeJsonString(escapeJsonString('a\n"中"'))).toBe('a\n"中"');
     expect(unescapeJsonString('{"name":"工具箱"}')).toBe('{"name":"工具箱"}');
